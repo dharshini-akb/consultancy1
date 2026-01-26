@@ -1,0 +1,138 @@
+.home-page {
+  min-height: 100vh;
+  position: relative;
+}
+
+.home-background {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #8B4513 0%, #A0522D 50%, #8B4513 100%);
+  background-image: 
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.1) 2px,
+      rgba(0,0,0,0.1) 4px
+    ),
+    url('data:image/svg+xml,<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="woodgrain" x="0" y="0" width="200" height="200" patternUnits="userSpaceOnUse"><path d="M0,100 Q50,80 100,100 T200,100" stroke="rgba(0,0,0,0.1)" fill="none" stroke-width="2"/><path d="M0,120 Q50,100 100,120 T200,120" stroke="rgba(0,0,0,0.08)" fill="none" stroke-width="1.5"/></pattern></defs><rect width="200" height="200" fill="url(%23woodgrain)"/></svg>');
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.home-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.2);
+  z-index: 1;
+}
+
+.home-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 50px;
+  position: relative;
+  z-index: 2;
+}
+
+.nav-brand {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.nav-links {
+  display: flex;
+  gap: 30px;
+}
+
+.nav-links a {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 16px;
+  transition: color 0.3s;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+
+.nav-links a:hover {
+  color: #FFD700;
+}
+
+.nav-logout-btn {
+  background: transparent;
+  border: 1px solid #fff;
+  border-radius: 16px;
+  padding: 6px 14px;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+}
+
+.nav-logout-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.home-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 100px 20px;
+  position: relative;
+  z-index: 2;
+}
+
+.home-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 64px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 40px;
+  text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+  line-height: 1.2;
+}
+
+.shop-now-btn {
+  background-color: #8B4513;
+  color: #fff;
+  padding: 18px 50px;
+  font-size: 20px;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 5px;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  border: 2px solid #654321;
+}
+
+.shop-now-btn:hover {
+  background-color: #A0522D;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+}
+
+@media (max-width: 768px) {
+  .home-title {
+    font-size: 36px;
+  }
+  
+  .nav-links {
+    gap: 15px;
+    flex-wrap: wrap;
+  }
+  
+  .nav-links a {
+    font-size: 14px;
+  }
+}

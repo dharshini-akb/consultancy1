@@ -1,0 +1,254 @@
+import React, { useState, useEffect, useContext } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { AuthContext } from '../context/AuthContext';
+import './Cart.css';
+
+const Cart = () => {
+  const { user, logout } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const [cart, setCart] = useState({ items: [] });
+  const [products, setProducts] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+  const [featuredHoney, setFeaturedHoney] = useState([]);
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  useEffect(() => {
+    fetchCart();
+    fetchFeaturedHoney();
+  }, []);
+
+  useEffect(() => {
+    calculateTotal();
+  }, [cart, products]);
+
+  const fetchCart = async () => {
+    try {
+      const res = await axios.get('/api/cart');
+      setCart(res.data);
+
+      // Build products map from enriched response if available; fallback to API fetch
+      if (res.data.items && res.data.items.length && res.data.items[0].product) {
+        const productsMap = {};
+        res.data.items.forEach(item => {
+          if (item.product) {
+            productsMap[item.productId] = item.product;
+          }
+        });
+        setProducts(productsMap);
+      } else {
+        const productIds = res.data.items.map(item => item.productId);
+        const productPromises = productIds.map(id => axios.get(`/api/products/${id}`));
+        const productResponses = await Promise.all(productPromises);
+        
+        const productsMap = {};
+        productResponses.forEach((pr, index) => {
+          productsMap[productIds[index]] = pr.data;
+        });
+        setProducts(productsMap);
+      }
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchFeaturedHoney = async () => {
+    try {
+      const res = await axios.get('/api/products', { params: { category: 'honey', featured: 'true' } });
+      setFeaturedHoney(res.data);
+    } catch (error) {
+      console.error('Error fetching featured honey:', error);
+    }
+  };
+
+  const addToCart = async (productId) => {
+    try {
+      if (!user) {
+        navigate('/login');
+        return;
+      }
+      await axios.post('/api/cart', { productId, quantity: 1 });
+      await fetchCart();
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+    }
+  };
+
+  const buyNow = async (productId) => {
+    try {
+      if (!user) {
+        navigate('/login');
+        return;
+      }
+      await axios.post('/api/cart', { productId, quantity: 1 });
+      navigate('/checkout');
+    } catch (error) {
+      console.error('Error in buy now:', error);
+    }
+  };
+
+  const calculateTotal = () => {
+    let sum = 0;
+    cart.items.forEach(item => {
+      const product = products[item.productId];
+      if (product) {
+        sum += product.price * item.quantity;
+      }
+    });
+    setTotal(sum);
+  };
+
+  const updateQuantity = async (productId, newQuantity) => {
+    if (newQuantity <= 0) {
+      await removeItem(productId);
+      return;
+    }
+
+    try {
+      await axios.put(`/api/cart/${productId}`, { quantity: newQuantity });
+      setCart(prev => ({
+        ...prev,
+        items: prev.items.map(item =>
+          item.productId === productId ? { ...item, quantity: newQuantity } : item
+        )
+      }));
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+    }
+  };
+
+  const removeItem = async (productId) => {
+    try {
+      await axios.delete(`/api/cart/${productId}`);
+      setCart(prev => ({
+        ...prev,
+        items: prev.items.filter(item => item.productId !== productId)
+      }));
+    } catch (error) {
+      console.error('Error removing item:', error);
+    }
+  };
+
+  if (loading) {
+    return <div className="loading">Loading cart...</div>;
+  }
+
+  return (
+    <div className="cart-page">
+      <nav className="cart-nav">
+        <Link to="/" className="nav-brand">Siva Honey Form</Link>
+        <div className="nav-links">
+          <Link to="/">Home</Link>
+          <Link to="/shop">Shop</Link>
+          <Link to="/about">About</Link>
+          <Link to="/contact">Contact</Link>
+          {user && (
+            <a href="#" onClick={(e) => { e.preventDefault(); handleLogout(); }}>Logout</a>
+          )}
+        </div>
+      </nav>
+
+      <div className="cart-container">
+        <h1 className="cart-title">Shopping Cart</h1>
+        <div className="featured-honey-section">
+          <h2 className="featured-title">Honey Varieties</h2>
+          <p className="featured-subtitle">Premium honey selections</p>
+          {featuredHoney.length === 0 ? (
+            <div className="no-featured">No featured honey yet</div>
+          ) : (
+            <div className="featured-grid">
+              {featuredHoney.map(h => (
+                <div key={h._id} className="featured-card">
+                  <div className="featured-image">
+                    {h.image ? (
+                      <img src={h.image.startsWith('http') || h.image.startsWith('data:')
+                        ? h.image
+                        : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/${h.image}`} alt={h.name} />
+                    ) : (
+                      <div className="featured-placeholder">No Image</div>
+                    )}
+                  </div>
+                  <div className="featured-info">
+                    <div className="featured-top-actions">
+                      <button className="featured-add-btn" onClick={() => addToCart(h._id)}>Add to Cart</button>
+                    </div>
+                    <h3 className="featured-name">{h.name}</h3>
+                    <p className="featured-price">₹{h.price.toFixed(2)}</p>
+                    <button className="featured-buy-btn" onClick={() => buyNow(h._id)}>Buy Now</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {cart.items.length === 0 ? (
+          <div className="empty-cart">
+            <p>Your cart is empty</p>
+            <Link to="/shop" className="continue-shopping-btn">Continue Shopping</Link>
+          </div>
+        ) : (
+          <div className="cart-content">
+            <div className="cart-items">
+              {cart.items.map(item => {
+                const product = products[item.productId];
+                if (!product) return null;
+
+                return (
+                  <div key={item.productId} className="cart-item">
+                    <div className="cart-item-image">
+                      {product.image ? (
+                        <img src={product.image.startsWith('http') || product.image.startsWith('data:')
+                          ? product.image
+                          : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/${product.image}`} alt={product.name} />
+                      ) : (
+                        <div className="item-placeholder">No Image</div>
+                      )}
+                    </div>
+                    <div className="cart-item-info">
+                      <h3>{product.name}</h3>
+                      <p className="item-price">₹{product.price.toFixed(2)}</p>
+                    </div>
+                    <div className="cart-item-quantity">
+                      <button onClick={() => updateQuantity(item.productId, item.quantity - 1)}>
+                        -
+                      </button>
+                      <span>{item.quantity}</span>
+                      <button onClick={() => updateQuantity(item.productId, item.quantity + 1)}>
+                        +
+                      </button>
+                    </div>
+                    <div className="cart-item-total">
+                      <p>₹{(product.price * item.quantity).toFixed(2)}</p>
+                    </div>
+                    <button 
+                      className="remove-item-btn"
+                      onClick={() => removeItem(item.productId)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="cart-summary">
+              <h2>Total: ₹{total.toFixed(2)}</h2>
+              <Link to="/checkout" className="checkout-btn">
+                Checkout
+              </Link>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Cart;
