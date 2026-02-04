@@ -48,7 +48,7 @@ router.post('/products', adminAuth, upload.single('image'), async (req, res) => 
       category: category || 'organic',
       stock: parseInt(stock) || 0,
       featured: featured === 'true',
-      image: req.file ? req.file.path : (imageUrl || ''),
+      image: req.file ? req.file.filename : (imageUrl || ''),
       createdBy: req.user.id
     });
 
@@ -80,7 +80,7 @@ router.put('/products/:id', adminAuth, upload.single('image'), async (req, res) 
     product.featured = featured !== undefined ? featured === 'true' : product.featured;
     
     if (req.file) {
-      product.image = req.file.path;
+      product.image = 'uploads/' + req.file.filename;
     } else if (imageUrl) {
       product.image = imageUrl;
     }

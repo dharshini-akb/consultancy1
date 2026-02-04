@@ -169,7 +169,7 @@ const Cart = () => {
                     {h.image ? (
                       <img src={h.image.startsWith('http') || h.image.startsWith('data:')
                         ? h.image
-                        : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/${h.image}`} alt={h.name} />
+                        : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/${h.image.replace(/\\/g, '/')}`} alt={h.name} />
                     ) : (
                       <div className="featured-placeholder">No Image</div>
                     )}
@@ -206,7 +206,7 @@ const Cart = () => {
                       {product.image ? (
                         <img src={product.image.startsWith('http') || product.image.startsWith('data:')
                           ? product.image
-                          : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/${product.image}`} alt={product.name} />
+                          : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/${product.image.replace(/\\/g, '/')}`} alt={product.name} />
                       ) : (
                         <div className="item-placeholder">No Image</div>
                       )}

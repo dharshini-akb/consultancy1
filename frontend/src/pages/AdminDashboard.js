@@ -329,6 +329,19 @@ const AdminDashboard = () => {
               {products.map(p => (
                 <div key={p._id} className="order-item">
                   <div className="order-header">
+                    <div className="product-list-image">
+                       {p.image ? (
+                        <img 
+                          src={p.image.startsWith('http') || p.image.startsWith('data:')
+                            ? p.image
+                            : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/${p.image.replace(/\\/g, '/')}`} 
+                          alt={p.name} 
+                          style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px', marginRight: '10px' }}
+                        />
+                      ) : (
+                        <div style={{ width: '50px', height: '50px', background: '#eee', borderRadius: '4px', marginRight: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>No Img</div>
+                      )}
+                    </div>
                     <span className="order-title">{p.name}</span>
                   </div>
                   <div className="order-details">
