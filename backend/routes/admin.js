@@ -11,7 +11,7 @@ const router = express.Router();
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/');
+    cb(null, 'public/products/');
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + '-' + file.originalname);
@@ -48,7 +48,7 @@ router.post('/products', adminAuth, upload.single('image'), async (req, res) => 
       category: category || 'organic',
       stock: parseInt(stock) || 0,
       featured: featured === 'true',
-      image: req.file ? req.file.filename : (imageUrl || ''),
+      image: req.file ? `products/${req.file.filename}` : (imageUrl || ''),
       createdBy: req.user.id
     });
 
@@ -80,7 +80,7 @@ router.put('/products/:id', adminAuth, upload.single('image'), async (req, res) 
     product.featured = featured !== undefined ? featured === 'true' : product.featured;
     
     if (req.file) {
-      product.image = 'uploads/' + req.file.filename;
+      product.image = `products/${req.file.filename}`;
     } else if (imageUrl) {
       product.image = imageUrl;
     }

@@ -12,12 +12,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-// Serve uploaded files
+// Serve static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/products', express.static(path.join(__dirname, 'public/products')));
 
 // Serve static files with proper CORS
 app.use((req, res, next) => {
-  if (req.path.startsWith('/uploads')) {
+  if (req.path.startsWith('/uploads') || req.path.startsWith('/products')) {
     res.header('Access-Control-Allow-Origin', '*');
   }
   next();

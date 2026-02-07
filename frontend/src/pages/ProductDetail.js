@@ -87,7 +87,7 @@ const ProductDetail = () => {
               <img 
                 src={product.image.startsWith('http') || product.image.startsWith('data:')
                   ? product.image
-                  : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/${product.image.replace(/\\/g, '/')}`} 
+                  : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/${product.image}`} 
                 alt={product.name}
                 className="product-main-image"
               />

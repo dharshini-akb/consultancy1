@@ -30,9 +30,13 @@ yarn-error.log*
 *.swo
 *~
 
-# Uploads
+# Uploads (temp folder only)
 backend/uploads/*
 !backend/uploads/.gitkeep
+
+# Product images (keep these in repository)
+!backend/public/products/
+!backend/public/products/*
 
 # MongoDB
 *.log

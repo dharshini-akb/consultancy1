@@ -328,7 +328,7 @@ const Checkout = () => {
                       {product.image ? (
                         <img src={product.image.startsWith('http') || product.image.startsWith('data:')
                           ? product.image
-                          : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/${product.image.replace(/\\/g, '/')}`} alt={product.name} />
+                          : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/${product.image}`} alt={product.name} />
                       ) : (
                         <div className="item-placeholder">No Image</div>
                       )}
