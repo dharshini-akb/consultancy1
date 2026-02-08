@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 import './About.css';
 
 const About = () => {
+  const { user } = useContext(AuthContext);
+
   return (
     <div className="about-page">
       <nav className="about-nav">
@@ -10,6 +13,7 @@ const About = () => {
         <div className="nav-links">
           <Link to="/">Home</Link>
           <Link to="/shop">Shop</Link>
+          {user && <Link to="/orders">My Orders</Link>}
           <Link to="/about">About</Link>
           <Link to="/contact">Contact</Link>
         </div>

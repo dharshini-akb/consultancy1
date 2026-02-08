@@ -62,6 +62,24 @@ const AdminDashboard = () => {
       setOrdersLoading(false);
     }
   };
+
+  const updateOrderStatus = async (orderId, newStatus) => {
+    try {
+      const res = await axios.put(`/api/admin/orders/${orderId}/status`, {
+        orderStatus: newStatus
+      });
+      
+      // Update the order in the state
+      setRecentOrders(recentOrders.map(order => 
+        order._id === orderId ? { ...order, orderStatus: newStatus } : order
+      ));
+      
+      alert('Order status updated successfully!');
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      alert('Failed to update order status');
+    }
+  };
   
   const fetchProducts = async () => {
     try {
@@ -411,7 +429,7 @@ const AdminDashboard = () => {
           </div>
 
           <div className="orders-panel">
-            <h2>Order Notifications</h2>
+            <h2>Order Management</h2>
             {ordersLoading ? (
               <div className="loading">Loading orders...</div>
             ) : recentOrders.length === 0 ? (
@@ -421,16 +439,56 @@ const AdminDashboard = () => {
                 {recentOrders.map(order => (
                   <div key={order._id} className="order-item">
                     <div className="order-header">
-                      <input type="checkbox" defaultChecked={order.emailSent} />
                       <span className="order-title">
-                        New Order: {order.items[0]?.product?.name || 'Order'}...
+                        Order #{order._id.slice(-8)}
                       </span>
+                      <select 
+                        value={order.orderStatus} 
+                        onChange={(e) => updateOrderStatus(order._id, e.target.value)}
+                        className="status-select"
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="processing">Processing</option>
+                        <option value="shipped">Shipped</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
                     </div>
                     <div className="order-details">
-                      <p>Order by: {order.user?.name || 'Unknown'}</p>
-                      <p>Amount: ₹{order.totalAmount.toFixed(2)}</p>
-                      <p>Status: {order.orderStatus}</p>
-                      <p>Date: {new Date(order.createdAt).toLocaleDateString()}</p>
+                      <div className="order-info">
+                        <p><strong>Customer:</strong> {order.user?.name || 'Unknown'}</p>
+                        <p><strong>Email:</strong> {order.user?.email || 'N/A'}</p>
+                        <p><strong>Phone:</strong> {order.shippingInfo?.phone || 'N/A'}</p>
+                        <p><strong>Payment Method:</strong> {
+                          order.paymentMethod === 'cod' ? 'Cash on Delivery' :
+                          order.paymentMethod === 'qr' ? 'QR Code (UPI)' :
+                          order.paymentMethod === 'stripe' ? 'Credit/Debit Card' :
+                          order.paymentMethod
+                        }</p>
+                        <p><strong>Payment Status:</strong> 
+                          <span className={`payment-status ${order.paymentStatus}`}>
+                            {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+                          </span>
+                        </p>
+                      </div>
+                      <div className="order-items-summary">
+                        <p><strong>Items:</strong></p>
+                        {order.items.map((item, index) => (
+                          <div key={index} className="order-item-summary">
+                            {item.quantity}x {item.product?.name || 'Product'} - ₹{item.price.toFixed(2)}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="order-total-info">
+                        <p><strong>Total Amount:</strong> ₹{order.totalAmount.toFixed(2)}</p>
+                        <p><strong>Order Date:</strong> {new Date(order.createdAt).toLocaleDateString()}</p>
+                        <p><strong>Shipping Address:</strong></p>
+                        <p className="address">
+                          {order.shippingInfo?.name}, {order.shippingInfo?.address},<br/>
+                          {order.shippingInfo?.city}, {order.shippingInfo?.state} {order.shippingInfo?.zipCode}<br/>
+                          {order.shippingInfo?.country}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ))}

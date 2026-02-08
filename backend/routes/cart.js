@@ -1,38 +1,29 @@
 const express = require('express');
 const { auth } = require('../middleware/auth');
 const Product = require('../models/Product');
+const Cart = require('../models/Cart');
 
 const router = express.Router();
-
-// In-memory cart storage (in production, use Redis or database)
-let carts = {};
-
-async function enrichCart(cart) {
-  const items = await Promise.all(
-    (cart.items || []).map(async (item) => {
-      const product = await Product.findById(item.productId).select('name price image category');
-      return {
-        productId: item.productId,
-        quantity: item.quantity,
-        product: product || null
-      };
-    })
-  );
-  const total = items.reduce((sum, i) => {
-    return i.product ? sum + i.product.price * i.quantity : sum;
-  }, 0);
-  return { items, total };
-}
 
 // @route   GET /api/cart
 // @desc    Get user's cart
 // @access  Private
 router.get('/', auth, async (req, res) => {
   try {
-    const userId = req.user.id.toString();
-    const cart = carts[userId] || { items: [], total: 0 };
-    const enriched = await enrichCart(cart);
-    res.json(enriched);
+    let cart = await Cart.findOne({ user: req.user.id }).populate('items.product', 'name price image category');
+    
+    if (!cart) {
+      cart = new Cart({ user: req.user.id, items: [] });
+      await cart.save();
+    }
+
+    const items = cart.items.map(item => ({
+      productId: item.product._id,
+      quantity: item.quantity,
+      product: item.product
+    }));
+
+    res.json({ items, total: cart.totalAmount });
   } catch (error) {
     console.error('Get cart error:', error);
     res.status(500).json({ message: 'Error fetching cart' });
@@ -45,22 +36,44 @@ router.get('/', auth, async (req, res) => {
 router.post('/', auth, async (req, res) => {
   try {
     const { productId, quantity } = req.body;
-    const userId = req.user.id.toString();
 
-    if (!carts[userId]) {
-      carts[userId] = { items: [], total: 0 };
+    // Validate product
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
     }
 
-    const existingItem = carts[userId].items.find(item => item.productId === productId);
+    let cart = await Cart.findOne({ user: req.user.id });
     
-    if (existingItem) {
-      existingItem.quantity += quantity || 1;
-    } else {
-      carts[userId].items.push({ productId, quantity: quantity || 1 });
+    if (!cart) {
+      cart = new Cart({ user: req.user.id, items: [] });
     }
 
-    const enriched = await enrichCart(carts[userId]);
-    res.json(enriched);
+    // Check if item already exists
+    const existingItemIndex = cart.items.findIndex(
+      item => item.product.toString() === productId
+    );
+    
+    if (existingItemIndex > -1) {
+      cart.items[existingItemIndex].quantity += quantity || 1;
+    } else {
+      cart.items.push({
+        product: productId,
+        quantity: quantity || 1,
+        price: product.price
+      });
+    }
+
+    await cart.save();
+    await cart.populate('items.product', 'name price image category');
+
+    const items = cart.items.map(item => ({
+      productId: item.product._id,
+      quantity: item.quantity,
+      product: item.product
+    }));
+
+    res.json({ items, total: cart.totalAmount });
   } catch (error) {
     console.error('Add to cart error:', error);
     res.status(500).json({ message: 'Error adding to cart' });
@@ -73,22 +86,36 @@ router.post('/', auth, async (req, res) => {
 router.put('/:productId', auth, async (req, res) => {
   try {
     const { quantity } = req.body;
-    const userId = req.user.id.toString();
 
-    if (!carts[userId]) {
+    if (quantity <= 0) {
+      return res.status(400).json({ message: 'Quantity must be greater than 0' });
+    }
+
+    let cart = await Cart.findOne({ user: req.user.id });
+    
+    if (!cart) {
       return res.status(404).json({ message: 'Cart not found' });
     }
 
-    const item = carts[userId].items.find(item => item.productId === req.params.productId);
+    const itemIndex = cart.items.findIndex(
+      item => item.product.toString() === req.params.productId
+    );
     
-    if (item) {
-      item.quantity = quantity;
-    } else {
+    if (itemIndex === -1) {
       return res.status(404).json({ message: 'Item not found in cart' });
     }
 
-    const enriched = await enrichCart(carts[userId]);
-    res.json(enriched);
+    cart.items[itemIndex].quantity = quantity;
+    await cart.save();
+    await cart.populate('items.product', 'name price image category');
+
+    const items = cart.items.map(item => ({
+      productId: item.product._id,
+      quantity: item.quantity,
+      product: item.product
+    }));
+
+    res.json({ items, total: cart.totalAmount });
   } catch (error) {
     console.error('Update cart error:', error);
     res.status(500).json({ message: 'Error updating cart' });
@@ -100,18 +127,26 @@ router.put('/:productId', auth, async (req, res) => {
 // @access  Private
 router.delete('/:productId', auth, async (req, res) => {
   try {
-    const userId = req.user.id.toString();
-
-    if (!carts[userId]) {
+    let cart = await Cart.findOne({ user: req.user.id });
+    
+    if (!cart) {
       return res.status(404).json({ message: 'Cart not found' });
     }
 
-    carts[userId].items = carts[userId].items.filter(
-      item => item.productId !== req.params.productId
+    cart.items = cart.items.filter(
+      item => item.product.toString() !== req.params.productId
     );
 
-    const enriched = await enrichCart(carts[userId]);
-    res.json(enriched);
+    await cart.save();
+    await cart.populate('items.product', 'name price image category');
+
+    const items = cart.items.map(item => ({
+      productId: item.product._id,
+      quantity: item.quantity,
+      product: item.product
+    }));
+
+    res.json({ items, total: cart.totalAmount });
   } catch (error) {
     console.error('Remove from cart error:', error);
     res.status(500).json({ message: 'Error removing from cart' });
@@ -123,8 +158,12 @@ router.delete('/:productId', auth, async (req, res) => {
 // @access  Private
 router.delete('/', auth, async (req, res) => {
   try {
-    const userId = req.user.id.toString();
-    carts[userId] = { items: [], total: 0 };
+    const cart = await Cart.findOneAndUpdate(
+      { user: req.user.id },
+      { items: [], totalAmount: 0 },
+      { new: true, upsert: true }
+    );
+
     res.json({ items: [], total: 0 });
   } catch (error) {
     console.error('Clear cart error:', error);

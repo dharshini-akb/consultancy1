@@ -19,6 +19,7 @@ const Home = () => {
           <div className="nav-links">
             <Link to="/">Home</Link>
             <Link to="/shop">Shop</Link>
+            {user && <Link to="/orders">My Orders</Link>}
             <Link to="/about">About</Link>
             <Link to="/contact">Contact</Link>
             {!user && <Link to="/login">Login</Link>}

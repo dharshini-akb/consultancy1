@@ -1,5 +1,6 @@
 const express = require('express');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const QRCode = require('qrcode');
 const { auth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -54,6 +55,35 @@ router.post('/verify', auth, async (req, res) => {
   } catch (error) {
     console.error('Payment verification error:', error);
     res.status(500).json({ message: 'Error verifying payment', error: error.message });
+  }
+});
+
+// @route   POST /api/payment/generate-qr
+// @desc    Generate QR code for payment
+// @access  Private
+router.post('/generate-qr', auth, async (req, res) => {
+  try {
+    const { amount, orderId, upiId } = req.body;
+    
+    // Default UPI ID for demo purposes
+    const paymentUpiId = upiId || 'sivahoney@paytm';
+    
+    // Create UPI payment string
+    const upiString = `upi://pay?pa=${paymentUpiId}&pn=Siva%20Honey&am=${amount}&cu=INR&tn=Order%20${orderId}`;
+    
+    // Generate QR code
+    const qrCodeDataUrl = await QRCode.toDataURL(upiString);
+    
+    res.json({
+      qrCode: qrCodeDataUrl,
+      upiId: paymentUpiId,
+      amount: amount,
+      orderId: orderId,
+      upiString: upiString
+    });
+  } catch (error) {
+    console.error('QR code generation error:', error);
+    res.status(500).json({ message: 'Error generating QR code', error: error.message });
   }
 });
 

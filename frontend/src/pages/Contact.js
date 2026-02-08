@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Link } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 import './Contact.css';
 
 const Contact = () => {
+  const { user } = useContext(AuthContext);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -30,6 +32,7 @@ const Contact = () => {
         <div className="nav-links">
           <Link to="/">Home</Link>
           <Link to="/shop">Shop</Link>
+          {user && <Link to="/orders">My Orders</Link>}
           <Link to="/about">About</Link>
           <Link to="/contact">Contact</Link>
         </div>

@@ -49,7 +49,7 @@ router.post('/', auth, async (req, res) => {
       paymentMethod,
       paymentId,
       totalAmount: calculatedTotal,
-      paymentStatus: paymentId ? 'completed' : 'pending'
+      paymentStatus: paymentMethod === 'cod' ? 'pending' : (paymentId ? 'completed' : 'pending')
     });
 
     await order.save();
@@ -109,6 +109,59 @@ router.get('/:id', auth, async (req, res) => {
   } catch (error) {
     console.error('Get order error:', error);
     res.status(500).json({ message: 'Error fetching order' });
+  }
+});
+
+// @route   GET /api/orders/admin/all
+// @desc    Get all orders (Admin only)
+// @access  Private (Admin)
+router.get('/admin/all', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const orders = await Order.find()
+      .populate('items.product', 'name image price')
+      .populate('user', 'name email phone')
+      .sort({ createdAt: -1 });
+    
+    res.json(orders);
+  } catch (error) {
+    console.error('Get all orders error:', error);
+    res.status(500).json({ message: 'Error fetching orders' });
+  }
+});
+
+// @route   PUT /api/orders/:id/status
+// @desc    Update order status (Admin only)
+// @access  Private (Admin)
+router.put('/:id/status', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const { orderStatus } = req.body;
+    
+    if (!['pending', 'processing', 'shipped', 'delivered', 'cancelled'].includes(orderStatus)) {
+      return res.status(400).json({ message: 'Invalid order status' });
+    }
+
+    const order = await Order.findByIdAndUpdate(
+      req.params.id,
+      { orderStatus },
+      { new: true }
+    ).populate('items.product', 'name image price');
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    res.json(order);
+  } catch (error) {
+    console.error('Update order status error:', error);
+    res.status(500).json({ message: 'Error updating order status' });
   }
 });
 

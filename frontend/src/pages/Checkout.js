@@ -5,26 +5,33 @@ import { Elements, CardElement, useStripe, useElements } from '@stripe/react-str
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import './Checkout.css';
+import './QRModal.css';
 
 const stripePromise = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY 
   ? loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY)
   : null;
 
-const CheckoutForm = ({ cart, products, total, onOrderComplete }) => {
+const StripeCheckoutWrapper = (props) => {
   const stripe = useStripe();
   const elements = useElements();
-  const [paymentMethod, setPaymentMethod] = useState('stripe');
+  return <CheckoutFormContent {...props} stripe={stripe} elements={elements} />;
+};
+
+const CheckoutFormContent = ({ cart, products, total, onOrderComplete, hasStripe, stripe, elements }) => {
+  const [paymentMethod, setPaymentMethod] = useState('cod');
   const [shippingInfo, setShippingInfo] = useState({
     name: '',
     address: '',
     city: '',
     state: '',
     zipCode: '',
-    country: '',
+    country: 'India',
     phone: ''
   });
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
+  const [qrCodeData, setQrCodeData] = useState(null);
+  const [showQrCode, setShowQrCode] = useState(false);
 
   const handleInputChange = (e) => {
     setShippingInfo({
@@ -40,9 +47,24 @@ const CheckoutForm = ({ cart, products, total, onOrderComplete }) => {
 
     try {
       let paymentId = null;
+      let orderId = null;
+
+      if (paymentMethod === 'qr') {
+        // Generate QR code first
+        const tempOrderId = 'TEMP-' + Date.now();
+        const { data } = await axios.post('/api/payment/generate-qr', {
+          amount: total,
+          orderId: tempOrderId
+        });
+        
+        setQrCodeData(data);
+        setShowQrCode(true);
+        setProcessing(false);
+        return; // Stop here and show QR code
+      }
 
       if (paymentMethod === 'stripe') {
-        if (!stripe || !elements) {
+        if (!hasStripe || !stripe || !elements) {
           throw new Error('Stripe is not loaded. Please configure Stripe keys.');
         }
         
@@ -82,6 +104,7 @@ const CheckoutForm = ({ cart, products, total, onOrderComplete }) => {
       };
 
       const orderRes = await axios.post('/api/orders', orderData);
+      orderId = orderRes.data._id;
 
       // Clear cart
       await axios.delete('/api/cart');
@@ -89,6 +112,35 @@ const CheckoutForm = ({ cart, products, total, onOrderComplete }) => {
       onOrderComplete(orderRes.data);
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Payment failed');
+      setProcessing(false);
+    }
+  };
+
+  const handleQrPaymentConfirmation = async () => {
+    try {
+      setProcessing(true);
+      
+      // Create order with QR payment
+      const orderData = {
+        items: cart.items.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity
+        })),
+        shippingInfo,
+        paymentMethod: 'qr',
+        paymentId: 'QR-' + Date.now(),
+        totalAmount: total
+      };
+
+      const orderRes = await axios.post('/api/orders', orderData);
+
+      // Clear cart
+      await axios.delete('/api/cart');
+
+      setShowQrCode(false);
+      onOrderComplete(orderRes.data);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Order creation failed');
       setProcessing(false);
     }
   };
@@ -180,25 +232,49 @@ const CheckoutForm = ({ cart, products, total, onOrderComplete }) => {
             <input
               type="radio"
               name="paymentMethod"
-              value="stripe"
-              checked={paymentMethod === 'stripe'}
+              value="cod"
+              checked={paymentMethod === 'cod'}
               onChange={(e) => setPaymentMethod(e.target.value)}
             />
-            <span>Credit/Debit Card</span>
+            <span>Cash on Delivery (COD)</span>
           </label>
           <label className="payment-option">
             <input
               type="radio"
               name="paymentMethod"
-              value="paypal"
-              checked={paymentMethod === 'paypal'}
+              value="qr"
+              checked={paymentMethod === 'qr'}
               onChange={(e) => setPaymentMethod(e.target.value)}
             />
-            <span>PayPal</span>
+            <span>QR Code Payment (UPI)</span>
           </label>
+          {hasStripe && (
+            <label className="payment-option">
+              <input
+                type="radio"
+                name="paymentMethod"
+                value="stripe"
+                checked={paymentMethod === 'stripe'}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+              />
+              <span>Credit/Debit Card</span>
+            </label>
+          )}
         </div>
 
-        {paymentMethod === 'stripe' && (
+        {paymentMethod === 'cod' && (
+          <div className="payment-info">
+            <p>Pay with cash when your order is delivered. Additional charges may apply for COD orders.</p>
+          </div>
+        )}
+
+        {paymentMethod === 'qr' && (
+          <div className="payment-info">
+            <p>Scan the QR code with any UPI app to make payment instantly.</p>
+          </div>
+        )}
+
+        {paymentMethod === 'stripe' && hasStripe && (
           <div className="stripe-element">
             <CardElement
               options={{
@@ -220,12 +296,51 @@ const CheckoutForm = ({ cart, products, total, onOrderComplete }) => {
         )}
       </div>
 
+      {/* QR Code Modal */}
+      {showQrCode && qrCodeData && (
+        <div className="qr-modal-overlay">
+          <div className="qr-modal">
+            <h3>Scan QR Code to Pay</h3>
+            <div className="qr-code-container">
+              <img src={qrCodeData.qrCode} alt="Payment QR Code" />
+            </div>
+            <div className="qr-details">
+              <p><strong>Amount:</strong> ₹{qrCodeData.amount}</p>
+              <p><strong>UPI ID:</strong> {qrCodeData.upiId}</p>
+              <p><strong>Order ID:</strong> {qrCodeData.orderId}</p>
+            </div>
+            <div className="qr-instructions">
+              <p>1. Open any UPI app (PhonePe, Paytm, Google Pay, etc.)</p>
+              <p>2. Scan this QR code</p>
+              <p>3. Complete the payment</p>
+              <p>4. Click "I've Paid" below</p>
+            </div>
+            <div className="qr-actions">
+              <button 
+                className="cancel-btn"
+                onClick={() => setShowQrCode(false)}
+                disabled={processing}
+              >
+                Cancel
+              </button>
+              <button 
+                className="confirm-payment-btn"
+                onClick={handleQrPaymentConfirmation}
+                disabled={processing}
+              >
+                {processing ? 'Processing...' : "I've Paid"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {error && <div className="error-message">{error}</div>}
 
       <button
         type="submit"
         className="complete-order-btn"
-        disabled={!stripe || processing}
+        disabled={(paymentMethod === 'stripe' && !hasStripe) || processing}
       >
         {processing ? 'Processing...' : 'Complete Order'}
       </button>
@@ -299,10 +414,13 @@ const Checkout = () => {
       <div className="checkout-page">
         <div className="order-success">
           <h1>Order Placed Successfully!</h1>
-          <p>Your order ID: {orderId?.slice(-6)}</p>
+          <p>Your order ID: {orderId?.slice(-6).toUpperCase()}</p>
           <p>You will receive a confirmation email shortly.</p>
           <button onClick={() => navigate('/shop')} className="continue-shopping-btn">
             Continue Shopping
+          </button>
+          <button onClick={() => navigate('/orders')} className="view-orders-btn" style={{marginLeft: '10px', backgroundColor: '#3498db'}}>
+            View Orders
           </button>
         </div>
       </div>
@@ -353,18 +471,24 @@ const Checkout = () => {
             <h2>Secure Checkout</h2>
             {stripePromise ? (
               <Elements stripe={stripePromise}>
-                <CheckoutForm
+                <StripeCheckoutWrapper
                   cart={cart}
                   products={products}
                   total={total}
                   onOrderComplete={handleOrderComplete}
+                  hasStripe={true}
                 />
               </Elements>
             ) : (
-              <div className="stripe-error">
-                <p>Stripe is not configured. Please set REACT_APP_STRIPE_PUBLISHABLE_KEY in your .env file.</p>
-                <p>For testing, you can still complete orders with other payment methods.</p>
-              </div>
+              <CheckoutFormContent
+                cart={cart}
+                products={products}
+                total={total}
+                onOrderComplete={handleOrderComplete}
+                hasStripe={false}
+                stripe={null}
+                elements={null}
+              />
             )}
           </div>
         </div>
