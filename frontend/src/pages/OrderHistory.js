@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import './OrderHistory.css';
 
@@ -10,6 +11,10 @@ const OrderHistory = () => {
 
   useEffect(() => {
     fetchOrders();
+    const interval = setInterval(() => {
+      fetchOrders();
+    }, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchOrders = async () => {
@@ -29,6 +34,16 @@ const OrderHistory = () => {
 
   return (
     <div className="order-history-page">
+      <nav className="order-nav">
+        <Link to="/" className="nav-brand">Siva Honey Form</Link>
+        <div className="nav-links">
+          <Link to="/">Home</Link>
+          <Link to="/shop">Shop</Link>
+          {user && <Link to="/orders">My Orders</Link>}
+          <Link to="/about">About</Link>
+          <Link to="/contact">Contact</Link>
+        </div>
+      </nav>
       <div className="order-history-container">
         <h1>My Order History</h1>
         

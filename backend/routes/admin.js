@@ -165,6 +165,9 @@ router.get('/orders', adminAuth, async (req, res) => {
 router.put('/orders/:id/status', adminAuth, async (req, res) => {
   try {
     const { orderStatus } = req.body;
+    if (!['pending', 'confirmed', 'delivered'].includes(orderStatus)) {
+      return res.status(400).json({ message: 'Invalid order status' });
+    }
     const order = await Order.findById(req.params.id);
     
     if (!order) {

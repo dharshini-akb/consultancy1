@@ -144,7 +144,7 @@ router.put('/:id/status', auth, async (req, res) => {
 
     const { orderStatus } = req.body;
     
-    if (!['pending', 'processing', 'shipped', 'delivered', 'cancelled'].includes(orderStatus)) {
+    if (!['pending', 'confirmed', 'delivered'].includes(orderStatus)) {
       return res.status(400).json({ message: 'Invalid order status' });
     }
 

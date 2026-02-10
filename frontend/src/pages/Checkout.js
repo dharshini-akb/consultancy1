@@ -412,6 +412,16 @@ const Checkout = () => {
   if (orderComplete) {
     return (
       <div className="checkout-page">
+        <nav className="checkout-nav">
+          <a href="/" className="nav-brand">Siva Honey Form</a>
+          <div className="nav-links">
+            <a href="/">Home</a>
+            <a href="/shop">Shop</a>
+            <a href="/orders">My Orders</a>
+            <a href="/about">About</a>
+            <a href="/contact">Contact</a>
+          </div>
+        </nav>
         <div className="order-success">
           <h1>Order Placed Successfully!</h1>
           <p>Your order ID: {orderId?.slice(-6).toUpperCase()}</p>
@@ -429,6 +439,16 @@ const Checkout = () => {
 
   return (
     <div className="checkout-page">
+      <nav className="checkout-nav">
+        <a href="/" className="nav-brand">Siva Honey Form</a>
+        <div className="nav-links">
+          <a href="/">Home</a>
+          <a href="/shop">Shop</a>
+          <a href="/orders">My Orders</a>
+          <a href="/about">About</a>
+          <a href="/contact">Contact</a>
+        </div>
+      </nav>
       <div className="checkout-container">
         <h1 className="checkout-title">Shopping Cart & Checkout</h1>
 

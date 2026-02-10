@@ -40,6 +40,10 @@ const AdminDashboard = () => {
     fetchDashboardData();
     fetchRecentOrders();
     fetchProducts();
+    const interval = setInterval(() => {
+      fetchRecentOrders();
+    }, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchDashboardData = async () => {
@@ -219,6 +223,17 @@ const AdminDashboard = () => {
 
   return (
     <div className="admin-dashboard-page">
+      <nav className="admin-nav">
+        <a href="/" className="nav-brand">Siva Honey Form</a>
+        <div className="nav-links">
+          <a href="/">Home</a>
+          <a href="/shop">Shop</a>
+          <a href="/orders">My Orders</a>
+          <a href="/about">About</a>
+          <a href="/contact">Contact</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); handleLogout(); }}>Logout</a>
+        </div>
+      </nav>
       <div className="admin-dashboard-background">
         <div className="admin-header">
           <h1>Admin Dashboard</h1>
@@ -448,10 +463,8 @@ const AdminDashboard = () => {
                         className="status-select"
                       >
                         <option value="pending">Pending</option>
-                        <option value="processing">Processing</option>
-                        <option value="shipped">Shipped</option>
+                        <option value="confirmed">Confirmed</option>
                         <option value="delivered">Delivered</option>
-                        <option value="cancelled">Cancelled</option>
                       </select>
                     </div>
                     <div className="order-details">
